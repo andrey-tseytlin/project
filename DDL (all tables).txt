@@ -1,0 +1,142 @@
+--input table
+
+CREATE TABLE public.events (
+	event_time timestamp NOT NULL,
+	process_day date NOT NULL,
+	client text NOT NULL,
+	account_id int8 NOT NULL,
+	category_list text NOT NULL,
+	is_impression bool NOT NULL,
+	is_click bool NOT NULL,
+	country text NOT NULL,
+	advertiser text NULL,
+	campaign text NULL,
+	ad_expose_time_sec int8 NOT NULL,
+	browser_type text NOT NULL,
+	browser_ver text NOT NULL,
+	traffic_filtration text NULL,
+	CONSTRAINT events_pkey PRIMARY KEY (event_time, client, account_id)
+);
+CREATE INDEX events_event_time_idx ON public.events USING btree (event_time);
+
+--Sample insert of data into the input table
+
+INSERT INTO events
+VALUES
+('2023-06-06 11:34:31.000000','2023-06-07','audiencex',1407,'17549;17658;79364;19922',TRUE,FALSE,'Philippines','klhht59','1412369394984017324',15,'chrome','96','automated browsing'),
+('2023-06-06 12:34:31.000000','2023-06-07','audiencex',1407,'17549;17658;79364;19922',TRUE,TRUE,'Philippines','klhht59','1412369394984017324',17,'chrome','96','automated browsing'),
+('2023-06-06 13:34:31.000000','2023-06-08','audiencex2',1408,'17549;17658;79365',TRUE,FALSE,'Israel','klhht60','1412369394984017325',25,'chrome','96','automated browsing'),
+('2023-06-06 14:34:31.000000','2023-06-09','audiencex3',1409,'17545',FALSE,TRUE,'USA','klhht61','1412369394984017326',30,'chrome','96','automated browsing'),
+('2023-06-06 15:34:31.000000','2023-06-09','audiencex3',1410,'17545;17658',FALSE,TRUE,'USA','klhht62','1412369394984017327',31,'chrome','96',NULL);
+
+
+
+--auxiliary table for data loaded from the increment period
+
+CREATE TABLE public.events_for_inc (
+	event_time timestamp NOT NULL,
+	process_day date NOT NULL,
+	client text NOT NULL,
+	account_id int8 NOT NULL,
+	category_list text NOT NULL,
+	is_impression bool NOT NULL,
+	is_click bool NOT NULL,
+	country text NOT NULL,
+	advertiser text NULL,
+	campaign text NULL,
+	ad_expose_time_sec int8 NOT NULL,
+	browser_type text NOT NULL,
+	browser_ver text NOT NULL,
+	traffic_filtration text NULL,
+	CONSTRAINT events_for_inc_pkey PRIMARY KEY (event_time, client, account_id)
+);
+
+--log table to catch errors during regular job runs
+
+CREATE TABLE public.insert_log (
+	procedure_name text NULL,
+	start_timestamp timestamp NULL,
+	finish_timestamp timestamp NULL,
+	duration interval NULL,
+	"sqlstate" text NULL,
+	"sqlerrm" text NULL
+);
+
+--table of parameters
+
+CREATE TABLE public.params (
+	parameter_name text NULL,
+	parameter_value text NULL
+);
+
+--Result table 1
+
+CREATE TABLE public.campaigns_agg_info (
+	event_time_dt date NOT NULL,
+	event_time_month text NOT NULL,
+	event_time_week text NOT NULL,
+	event_time_day text NOT NULL,
+	client text NOT NULL,
+	advertiser text NULL,
+	campaign text NULL,
+	tracked_ad_amt int8 NULL,
+	impression_amt int8 NULL,
+	clicks_amt int8 NULL
+);
+CREATE INDEX campaigns_agg_info_event_time_dt_idx ON public.campaigns_agg_info USING btree (event_time_dt);
+
+--Result table 2
+
+CREATE TABLE public.country_advertiser_agg_info (
+	event_time_dt date NOT NULL,
+	event_time_month text NOT NULL,
+	event_time_week text NOT NULL,
+	event_time_day text NOT NULL,
+	client text NOT NULL,
+	country text NOT NULL,
+	advertiser text NULL,
+	tracked_ad_amt int8 NULL,
+	impression_amt int8 NULL,
+	clicks_amt int8 NULL
+);
+CREATE INDEX country_advertiser_agg_info_event_time_dt_idx ON public.country_advertiser_agg_info USING btree (event_time_dt);
+
+--Result table 3
+
+CREATE TABLE public.traffic_filtration_agg_info (
+	event_time_dt date NOT NULL,
+	event_time_month text NOT NULL,
+	event_time_week text NOT NULL,
+	event_time_day text NOT NULL,
+	client text NOT NULL,
+	traffic_filtration text NULL,
+	impression_amt int8 NULL
+);
+CREATE INDEX traffic_filtration_agg_info_event_time_dt_idx ON public.traffic_filtration_agg_info USING btree (event_time_dt);
+
+--Result table 4
+
+CREATE TABLE public.top_100_categories_agg_info (
+	event_time_dt date NOT NULL,
+	event_time_month text NOT NULL,
+	event_time_week text NOT NULL,
+	event_time_day text NOT NULL,
+	client text NOT NULL,
+	advertiser text NULL,
+	campaign text NULL,
+	category_name text NOT NULL,
+	impression_amt int8 NULL
+);
+CREATE INDEX top_100_categories_agg_info_event_time_dt_idx ON public.top_100_categories_agg_info USING btree (event_time_dt);
+
+--RESULT select:
+
+SELECT * FROM campaigns_agg_info;
+SELECT * FROM country_advertiser_agg_info;
+SELECT * FROM traffic_filtration_agg_info;
+SELECT * FROM top_100_categories_agg_info;
+
+
+--JOB (for regular update):
+
+CALL public.tables_refresh();

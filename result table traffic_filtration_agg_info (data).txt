@@ -1,0 +1,6 @@
+event_time_dt|event_time_month|event_time_week|event_time_day|client    |traffic_filtration|impression_amt|
+-------------+----------------+---------------+--------------+----------+------------------+--------------+
+   2023-06-06|6               |23             |6             |audiencex3|not filtered      |             0|
+   2023-06-06|6               |23             |6             |audiencex |automated browsing|             2|
+   2023-06-06|6               |23             |6             |audiencex2|automated browsing|             1|
+   2023-06-06|6               |23             |6             |audiencex3|automated browsing|             0|

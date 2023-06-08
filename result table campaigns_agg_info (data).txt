@@ -1,0 +1,6 @@
+event_time_dt|event_time_month|event_time_week|event_time_day|client    |advertiser|campaign           |tracked_ad_amt|impression_amt|clicks_amt|
+-------------+----------------+---------------+--------------+----------+----------+-------------------+--------------+--------------+----------+
+   2023-06-06|6               |23             |6             |audiencex2|klhht60   |1412369394984017325|             1|             1|         0|
+   2023-06-06|6               |23             |6             |audiencex3|klhht61   |1412369394984017326|             1|             0|         1|
+   2023-06-06|6               |23             |6             |audiencex3|klhht62   |1412369394984017327|             1|             0|         1|
+   2023-06-06|6               |23             |6             |audiencex |klhht59   |1412369394984017324|             2|             2|         1|

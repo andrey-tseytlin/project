@@ -1,0 +1,6 @@
+event_time_dt|event_time_month|event_time_week|event_time_day|client    |country    |advertiser|tracked_ad_amt|impression_amt|clicks_amt|
+-------------+----------------+---------------+--------------+----------+-----------+----------+--------------+--------------+----------+
+   2023-06-06|6               |23             |6             |audiencex3|USA        |klhht62   |             1|             0|         1|
+   2023-06-06|6               |23             |6             |audiencex3|USA        |klhht61   |             1|             0|         1|
+   2023-06-06|6               |23             |6             |audiencex2|Israel     |klhht60   |             1|             1|         0|
+   2023-06-06|6               |23             |6             |audiencex |Philippines|klhht59   |             2|             2|         1|
