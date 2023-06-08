@@ -1,0 +1,7 @@
+event_time             |process_day|client    |account_id|category_list          |is_impression|is_click|country    |advertiser|campaign           |ad_expose_time_sec|browser_type|browser_ver|traffic_filtration|
+-----------------------+-----------+----------+----------+-----------------------+-------------+--------+-----------+----------+-------------------+------------------+------------+-----------+------------------+
+2023-06-06 11:34:31.000| 2023-06-07|audiencex |      1407|17549;17658;79364;19922|true         |false   |Philippines|klhht59   |1412369394984017324|                15|chrome      |96         |automated browsing|
+2023-06-06 12:34:31.000| 2023-06-07|audiencex |      1407|17549;17658;79364;19922|true         |true    |Philippines|klhht59   |1412369394984017324|                17|chrome      |96         |automated browsing|
+2023-06-06 13:34:31.000| 2023-06-08|audiencex2|      1408|17549;17658;79365      |true         |false   |Israel     |klhht60   |1412369394984017325|                25|chrome      |96         |automated browsing|
+2023-06-06 14:34:31.000| 2023-06-09|audiencex3|      1409|17545                  |false        |true    |USA        |klhht61   |1412369394984017326|                30|chrome      |96         |automated browsing|
+2023-06-06 15:34:31.000| 2023-06-09|audiencex3|      1410|17545;17658            |false        |true    |USA        |klhht62   |1412369394984017327|                31|chrome      |96         |                  |

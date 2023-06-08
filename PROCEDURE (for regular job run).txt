@@ -1,0 +1,281 @@
+CREATE OR REPLACE PROCEDURE public.tables_refresh()
+ LANGUAGE plpgsql
+AS $procedure$
+
+DECLARE
+
+    v_counter_inserted                           int;
+   	v_increment_start_dt				        date;
+   	    	
+    -- logs
+    v_start_timestamp timestamp := clock_timestamp();
+	v_stop_timestamp                       timestamp;
+	v_function_name TEXT 		 := 'tables_refresh';
+
+    BEGIN
+    
+	RAISE NOTICE '[%] Script started.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+	DROP TABLE IF EXISTS category_name_list;
+	DROP TABLE IF EXISTS temp_categories_agg_info;
+
+	v_increment_start_dt = (SELECT  
+									(v_start_timestamp - parameter_value::INTERVAL)::date
+									
+									FROM
+									public.params
+									
+									WHERE
+									parameter_name = 'increment_period'); --Date and time of start of incremental refresh
+	
+		
+	--Delete from result tables all the data after increment start_date
+									
+	DELETE
+	FROM
+	public.campaigns_agg_info
+	WHERE
+	event_time_dt >= v_increment_start_dt;
+
+	DELETE
+	FROM
+	public.country_advertiser_agg_info
+	WHERE
+	event_time_dt >= v_increment_start_dt;
+
+	DELETE
+	FROM
+	public.traffic_filtration_agg_info
+	WHERE
+	event_time_dt >= v_increment_start_dt;
+
+	DELETE
+	FROM
+	public.top_100_categories_agg_info
+	WHERE
+	event_time_dt >= v_increment_start_dt;
+									
+	RAISE NOTICE '[%] Rows after increment start date from tables deleted.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+									
+
+
+	TRUNCATE public.events_for_inc; --clean the TABLE TO work with
+
+	INSERT INTO public.events_for_inc
+	SELECT
+	*
+	FROM 
+	public.events
+	
+	WHERE
+	(event_time::timestamp without time zone at time zone 'IDT')::date >= v_increment_start_dt; --INSERT the NEW DATA (after increment date)
+									
+	
+	
+	--Insert into result tables data after increment start_date
+									
+	RAISE NOTICE '[%] Insert into table campaigns_agg_info started.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+	INSERT INTO public.campaigns_agg_info
+	(SELECT 
+			(event_time::timestamp without time zone at time zone 'IDT')::date AS event_time_dt,
+			(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_month,
+			(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_week,
+			(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_day,
+			client,
+			advertiser,
+			campaign,
+			count((event_time::timestamp without time zone at time zone 'IDT')::date) AS tracked_ad_amt,
+			sum(CASE WHEN is_impression IS TRUE THEN 1 ELSE 0 END) AS impression_amt,
+			sum(CASE WHEN is_click IS TRUE THEN 1 ELSE 0 END) AS clicks_amt
+			
+		FROM 
+		public.events_for_inc
+				
+		GROUP BY
+		(event_time::timestamp without time zone at time zone 'IDT')::date,
+		(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		client,
+		advertiser,
+		campaign		  
+	);
+
+	get diagnostics v_counter_inserted = row_count;
+	
+	RAISE NOTICE '[%] Insert into table campaigns_agg_info completed. Inserted: [%]', to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS'), v_counter_inserted;
+
+
+
+	RAISE NOTICE '[%] Insert into table country_advertiser_agg_info started.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+	INSERT INTO public.country_advertiser_agg_info
+	(SELECT 
+			(event_time::timestamp without time zone at time zone 'IDT')::date AS event_time_dt,
+			(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_month,
+			(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_week,
+			(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_day,
+			client,
+			country,
+			advertiser,
+			count((event_time::timestamp without time zone at time zone 'IDT')::date) AS tracked_ad_amt,
+			sum(CASE WHEN is_impression IS TRUE THEN 1 ELSE 0 END) AS impression_amt,
+			sum(CASE WHEN is_click IS TRUE THEN 1 ELSE 0 END) AS clicks_amt
+			
+		FROM 
+		public.events_for_inc
+				
+		GROUP BY
+		(event_time::timestamp without time zone at time zone 'IDT')::date,
+		(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		client,
+		country,
+		advertiser  
+	);
+
+	get diagnostics v_counter_inserted = row_count;
+	
+	RAISE NOTICE '[%] Insert into table country_advertiser_agg_info completed. Inserted: [%]', to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS'), v_counter_inserted;
+
+
+
+	RAISE NOTICE '[%] Insert into table traffic_filtration_agg_info started.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+	INSERT INTO public.traffic_filtration_agg_info
+	(SELECT 
+			(event_time::timestamp without time zone at time zone 'IDT')::date AS event_time_dt,
+			(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_month,
+			(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_week,
+			(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_day,
+			client,
+			COALESCE(traffic_filtration,'not filtered')	AS traffic_filtration,
+			sum(CASE WHEN is_impression IS TRUE THEN 1 ELSE 0 END) AS impression_amt
+			
+		FROM 
+		public.events_for_inc
+				
+		GROUP BY
+		(event_time::timestamp without time zone at time zone 'IDT')::date,
+		(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		client,
+		COALESCE(traffic_filtration,'not filtered')
+	);
+
+	get diagnostics v_counter_inserted = row_count;
+	
+	RAISE NOTICE '[%] Insert into table traffic_filtration_agg_info completed. Inserted: [%]', to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS'), v_counter_inserted;
+
+
+
+	RAISE NOTICE '[%] Create temp table category_name_list started.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+	CREATE TEMP TABLE category_name_list
+	AS
+	(SELECT 
+			(event_time::timestamp without time zone at time zone 'IDT') AS event_time,
+			client,
+			advertiser,
+			campaign,
+			regexp_split_to_table(category_list, ';') AS category_name,
+			is_impression
+			
+		FROM 
+		public.events_for_inc
+	);
+
+	RAISE NOTICE '[%] Temp table category_name_list created.', to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+
+	RAISE NOTICE '[%] Create temp table temp_categories_agg_info started.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+	
+	CREATE TEMP TABLE temp_categories_agg_info
+	AS
+	(SELECT 
+			(event_time::timestamp without time zone at time zone 'IDT')::date AS event_time_dt,
+			(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_month,
+			(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_week,
+			(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT AS event_time_day,
+			client,
+			advertiser,
+			campaign,
+			category_name,
+			count(DISTINCT (CASE WHEN is_impression IS TRUE THEN (event_time::timestamp without time zone at time zone 'IDT') ELSE NULL::timestamp END)) AS impression_amt
+			
+		FROM 
+		category_name_list
+				
+		GROUP BY
+		(event_time::timestamp without time zone at time zone 'IDT')::date,
+		(EXTRACT (MONTH FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (week FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		(EXTRACT (DAY FROM (event_time::timestamp without time zone at time zone 'IDT')))::TEXT,
+		client,
+		advertiser,
+		campaign,
+		category_name
+	);
+
+	RAISE NOTICE '[%] Temp table temp_categories_agg_info created.', to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+
+
+	RAISE NOTICE '[%] Insert into table top_100_categories_agg_info started.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+	INSERT INTO public.top_100_categories_agg_info
+	(SELECT 
+			*			
+		FROM 
+		temp_categories_agg_info
+		
+		ORDER BY
+		impression_amt DESC
+		
+		LIMIT 100
+	);
+
+	get diagnostics v_counter_inserted = row_count;
+	
+	RAISE NOTICE '[%] Insert into table top_100_categories_agg_info completed. Inserted: [%]', to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS'), v_counter_inserted;
+
+
+
+	DROP TABLE IF EXISTS category_name_list;
+	DROP TABLE IF EXISTS temp_categories_agg_info; --clean TEMP tables
+
+
+
+--
+	
+	v_stop_timestamp := clock_timestamp(); 
+
+      insert into public.insert_log
+      values (v_function_name, v_start_timestamp, v_stop_timestamp, v_stop_timestamp - v_start_timestamp, null, null);
+
+    raise notice '[%] Script finished.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+	return;
+
+	-- catch errors and write them to log table
+	exception when others then
+
+      begin 
+             
+      v_stop_timestamp := clock_timestamp();
+
+    raise notice '[%] Error.',  to_char(clock_timestamp(), 'YYYY-MM-DD HH24:MI:SS');
+
+      insert into public.insert_log 
+      values (v_function_name, v_start_timestamp, v_stop_timestamp, v_stop_timestamp - v_start_timestamp, sqlstate, sqlerrm);
+
+      return;                   
+      end;
+     
+       END;
+
+$procedure$
+;
